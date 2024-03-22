@@ -9,7 +9,7 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = (props) => {
-  const socket = useMemo(() => io("localhost:3001"), []);
+  const socket = useMemo(() => io(import.meta.env.VITE_URL), []);
 
   return (
     <SocketContext.Provider value={socket}>
