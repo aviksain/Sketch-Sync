@@ -2,47 +2,56 @@ import { useState, useEffect } from "react";
 import { useDraw } from "../hooks/useDraw";
 import { drawLine } from "../utils/drawLine";
 import audioFile from "../utils/audio.mp3";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useSocket } from "../context/SocketProvider.jsx";
 import WebRTC from "../components/WebRTC.jsx";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Pencil, 
+  Circle, 
+  Square, 
+  Trash2, 
+  LogOut, 
+  Download,
+  Share2,
+  Palette,
+  Users
+} from "lucide-react";
+import { ModeToggle } from "@/components/mode-toggle";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
-const Canvas = ({}) => {
-  const [lineWidth, setLineWidth] = useState(20);
-  const [color, setColor] = useState("#000");
+
+const Canvas = () => {
+  const [lineWidth, setLineWidth] = useState([5]);
+  const [color, setColor] = useState("#000000");
   const [currShape, setCurrShape] = useState("line");
   const { canvasRef, onMouseDown, clear } = useDraw(createLine);
 
   const socket = useSocket();
-  let { slug } = useParams();
+  const { slug } = useParams();
+  const navigate = useNavigate();
 
   const audio = new Audio(audioFile);
 
-  const handleShapeChange = (e) => {
-    setCurrShape(e.target.value);
-  };
-
   useEffect(() => {
     const ctx = canvasRef.current?.getContext("2d");
-
     socket.emit("join-room", slug);
-
     socket.on("clear-canvas", clear);
-
-    socket.on("play-audio", () => {
-      audio.play();
-    });
-
+    socket.on("play-audio", () => { audio.play(); });
     socket.emit("client-ready", slug);
 
     socket.on("get-canvas-state", () => {
       if (!canvasRef.current?.toDataURL()) return;
-      console.log("sending canvas state");
       let currCanvasURL = canvasRef.current?.toDataURL();
       socket.emit("canvas-state", currCanvasURL, slug);
     });
 
     socket.on("canvas-state-from-server", (state) => {
-      console.log("I received the state");
       const img = new Image();
       img.src = state;
       img.onload = () => {
@@ -51,7 +60,7 @@ const Canvas = ({}) => {
     });
 
     socket.on("draw-line", ({ prevPoint, currentPoint, color, lineWidth }) => {
-      if (!ctx) return console.log("no ctx here");
+      if (!ctx) return;
       drawLine({ prevPoint, currentPoint, ctx, color, lineWidth });
     });
 
@@ -62,14 +71,14 @@ const Canvas = ({}) => {
       socket.off("clear-canvas");
       socket.off("play-audio");
     };
-  }, [canvasRef]);
+  }, [canvasRef, slug, socket]);
 
   function createLine({ prevPoint, currentPoint, ctx }) {
     socket.emit("draw-line", {
       prevPoint,
       currentPoint,
       color,
-      lineWidth,
+      lineWidth: lineWidth[0],
       slug,
     });
 
@@ -78,110 +87,205 @@ const Canvas = ({}) => {
       currentPoint,
       ctx,
       color,
-      lineWidth,
+      lineWidth: lineWidth[0],
     });
   }
 
+  const downloadCanvas = () => {
+    const link = document.createElement("a");
+    link.download = `sketch-${slug}.png`;
+    link.href = canvasRef.current.toDataURL();
+    link.click();
+  };
+
   return (
-    <>
-      <div className="flex justify-center items-center">
-        <div className="w-screen h-screen bg-white flex justify-around items-center">
-          <div className="pt-10 h-screen flex flex-col gap-10 pr-10 bg-white items-center">
-            {/* <ChromePicker color={color} onChange={(e) => setColor(e.hex)} /> */}
-            <input
-              color={color}
-              onChange={(e) => setColor(e.target.value)}
-              type="color"
-              id="colorPicker"
-              name="colorPicker"
-            />
-            <button
-              type="button"
-              className="p-2 rounded-md border border-black"
-              onClick={() => socket.emit("clear-canvas", slug)}
-            >
-              Clear canvas
-            </button>
-            <input
-              type="range"
-              min="4"
-              max="30"
-              value={lineWidth}
-              onChange={(e) => {
-                setLineWidth(e.target.value);
-              }}
-            />
+    <TooltipProvider>
 
-            <ul>
-              <li
-                className={`${
-                  currShape == "rectangle" ? "bg-yellow-700 rounded " : ""
-                } text-center`}
-              >
-                <input
-                  id="rectangle"
-                  type="radio"
-                  value="rectangle"
-                  checked={currShape === "rectangle"}
-                  onChange={handleShapeChange}
-                  className="hidden"
+      <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans">
+        {/* Main Workspace */}
+        <main className="flex-1 flex flex-col relative overflow-hidden">
+          {/* Refined Header */}
+          <header className="h-16 bg-card/50 backdrop-blur-md border-b border-border flex items-center justify-between px-8 z-20">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary rounded-lg text-primary-foreground shadow-lg shadow-primary/20">
+                  <Palette className="w-5 h-5" />
+                </div>
+                <div>
+                  <h1 className="font-bold text-sm tracking-tight">Sketch Sync</h1>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Room: {slug}</p>
+                </div>
+              </div>
+              
+              <Separator orientation="vertical" className="h-8 mx-2" />
+              
+              <div className="flex items-center gap-4 w-64">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest min-w-[32px]">Size</span>
+                <Slider 
+                  value={lineWidth} 
+                  onValueChange={setLineWidth} 
+                  max={30} 
+                  min={1} 
+                  step={1} 
+                  className="w-full"
                 />
-                <label className="rounded-lg text-2xl" htmlFor="rectangle">
-                  Rectangle
-                </label>
-              </li>
-              <li
-                className={`${
-                  currShape == "circle" ? "bg-yellow-700 rounded" : ""
-                } text-center`}
-              >
-                <input
-                  id="circle"
-                  type="radio"
-                  value="circle"
-                  checked={currShape === "circle"}
-                  onChange={handleShapeChange}
-                  className="hidden"
-                />
-                <label className="rounded-lg text-2xl " htmlFor="circle">
-                  Circle
-                </label>
-              </li>
-              <li
-                className={`${
-                  currShape == "line" ? "bg-yellow-700 rounded" : ""
-                } text-center`}
-              >
-                <input
-                  id="line"
-                  type="radio"
-                  value="line"
-                  checked={currShape === "line"}
-                  onChange={handleShapeChange}
-                  className="hidden"
-                />
-                <label className="rounded-lg text-2xl" htmlFor="line">
-                  Line
-                </label>
-              </li>
-            </ul>
+                <span className="text-xs font-mono font-bold bg-muted px-2 py-0.5 rounded border border-border min-w-[28px] text-center">
+                  {lineWidth[0]}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <ModeToggle />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 h-9 px-4 font-semibold border-border bg-background/50" onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                  }}>
+                    <Share2 className="w-4 h-4" /> Share
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Copy join link</TooltipContent>
+              </Tooltip>
+              
+              <Separator orientation="vertical" className="h-6 mx-1" />
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => navigate("/")} 
+                    className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Exit Laboratory</TooltipContent>
+              </Tooltip>
+            </div>
+          </header>
+
+          {/* Canvas Area */}
+          <div className="flex-1 flex items-center justify-center p-12 bg-muted/30 relative group overflow-auto">
+            <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-xl bg-white overflow-hidden border border-border ring-1 ring-black/5 transition-all duration-500">
+              <canvas
+                ref={canvasRef}
+                onMouseDown={onMouseDown}
+                width={900}
+                height={700}
+                className="cursor-crosshair"
+              />
+            </div>
+
+            {/* Floating Toolbar (Dock Style) */}
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30">
+              <Card className="flex items-center gap-1.5 p-2 px-3 shadow-2xl border-border/50 bg-card/80 backdrop-blur-xl rounded-2xl ring-1 ring-black/5">
+                <ToggleGroup 
+                  type="single" 
+                  value={currShape} 
+                  onValueChange={(val) => val && setCurrShape(val)}
+                  className="gap-1"
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="line" size="icon" className="h-10 w-10 text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground rounded-xl transition-all">
+                        <Pencil className="w-5 h-5" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent>Freehand Brush</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="rectangle" size="icon" className="h-10 w-10 text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground rounded-xl transition-all">
+                        <Square className="w-5 h-5" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent>Rectangle Tool</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value="circle" size="icon" className="h-10 w-10 text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground rounded-xl transition-all">
+                        <Circle className="w-5 h-5" />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent>Circle Tool</TooltipContent>
+                  </Tooltip>
+                </ToggleGroup>
+
+                <Separator orientation="vertical" className="h-8 mx-1" />
+
+                <div className="flex items-center gap-1">
+                  <label htmlFor="colorPicker" className="cursor-pointer group relative">
+                    <div 
+                      className="w-10 h-10 rounded-xl border-2 border-border/50 shadow-inner group-hover:scale-105 transition-transform" 
+                      style={{ backgroundColor: color }}
+                    />
+                    <input
+                      id="colorPicker"
+                      type="color"
+                      value={color}
+                      onChange={(e) => setColor(e.target.value)}
+                      className="sr-only"
+                    />
+                  </label>
+                </div>
+
+                <Separator orientation="vertical" className="h-8 mx-1" />
+
+                <div className="flex items-center gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => socket.emit("clear-canvas", slug)}
+                        className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Clear Canvas</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={downloadCanvas}
+                        className="h-10 w-10 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-xl"
+                      >
+                        <Download className="w-5 h-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Export Sketch</TooltipContent>
+                  </Tooltip>
+                </div>
+              </Card>
+            </div>
           </div>
-          <canvas
-            ref={canvasRef}
-            onMouseDown={onMouseDown}
-            width={730}
-            height={730}
-            className="border border-black rounded-md"
-          />
-        </div>
-        <div className="h-screen w-96">
-          <WebRTC/>
-        </div>
+        </main>
 
-        {/* <nav class="w-96 right-0 pb-2 bg-black border-l border-gray-300 xl:block"></nav> */}
+        {/* Right Sidebar - Participants */}
+        <aside className="w-80 bg-card border-l border-border flex flex-col z-20 shadow-[-4px_0_24px_-8px_rgba(0,0,0,0.05)]">
+          <div className="p-6 border-b border-border flex items-center justify-between bg-card/50">
+            <div className="flex items-center gap-2.5">
+              <Users className="w-4 h-4 text-primary" />
+              <h2 className="font-bold text-sm tracking-tight uppercase">Participants</h2>
+            </div>
+            <Badge variant="secondary" className="px-2 font-mono h-5">4</Badge>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <WebRTC />
+          </div>
+        </aside>
       </div>
-    </>
+    </TooltipProvider>
   );
 };
 
 export default Canvas;
+

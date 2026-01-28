@@ -23,10 +23,15 @@ const router = createBrowserRouter(
   )
 );
 
+import { ThemeProvider } from "./components/theme-provider";
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <SocketProvider>
-      <RouterProvider router={router} />
-    </SocketProvider>
+    <ThemeProvider defaultTheme="dark" storageKey="sketch-sync-theme">
+      <SocketProvider>
+        <RouterProvider router={router} />
+      </SocketProvider>
+    </ThemeProvider>
   </React.StrictMode>
 );
+
