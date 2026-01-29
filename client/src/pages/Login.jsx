@@ -9,8 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Copy, RefreshCw, Palette } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 
-function Login() {
-
+const Login = () => {
   const [roomNumber, setRoomNumber] = useState("");
   const [name, setName] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
@@ -40,19 +39,15 @@ function Login() {
     }
   };
 
-  const handleJoinRoom = useCallback(
-    (data) => {
-      const { roomNumber } = data;
-      navigate(`/${roomNumber}`);
-    },
-    [navigate]
-  );
+  const handleJoinRoom = useCallback((data) => {
+    const { roomNumber } = data;
+    navigate(`/${roomNumber}`);
+  },[navigate]);
 
   useEffect(() => {
     socket.on("client-connect", handleJoinRoom);
-    return () => {
-      socket.off("client-connect", handleJoinRoom);
-    };
+
+    return () => socket.off("client-connect", handleJoinRoom);
   }, [socket, handleJoinRoom]);
 
   return (

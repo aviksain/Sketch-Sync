@@ -19,7 +19,8 @@ import {
   Download,
   Share2,
   Palette,
-  Users
+  Users,
+  Copy
 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -113,7 +114,24 @@ const Canvas = () => {
                 </div>
                 <div>
                   <h1 className="font-bold text-sm tracking-tight">Sketch Sync</h1>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Room: {slug}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Room: {slug}</p>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-4 w-4 p-0 hover:bg-muted"
+                          onClick={() => {
+                            navigator.clipboard.writeText(slug);
+                          }}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy Room ID</TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
               </div>
               
@@ -168,7 +186,7 @@ const Canvas = () => {
 
           {/* Canvas Area */}
           <div className="flex-1 flex items-center justify-center p-12 bg-muted/30 relative group overflow-auto">
-            <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-xl bg-white overflow-hidden border border-border ring-1 ring-black/5 transition-all duration-500">
+            <div className="relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] dark:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] rounded-xl bg-background overflow-hidden border border-border ring-1 ring-black/5 dark:ring-white/5 transition-all duration-500">
               <canvas
                 ref={canvasRef}
                 onMouseDown={onMouseDown}
@@ -180,7 +198,7 @@ const Canvas = () => {
 
             {/* Floating Toolbar (Dock Style) */}
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30">
-              <Card className="flex items-center gap-1.5 p-2 px-3 shadow-2xl border-border/50 bg-card/80 backdrop-blur-xl rounded-2xl ring-1 ring-black/5">
+              <Card className="flex items-center gap-1.5 p-2 px-3 shadow-2xl border-border bg-card/95 backdrop-blur-xl rounded-2xl ring-1 ring-border transition-all">
                 <ToggleGroup 
                   type="single" 
                   value={currShape} 
@@ -276,7 +294,7 @@ const Canvas = () => {
               <Users className="w-4 h-4 text-primary" />
               <h2 className="font-bold text-sm tracking-tight uppercase">Participants</h2>
             </div>
-            <Badge variant="secondary" className="px-2 font-mono h-5">4</Badge>
+            {/* <Badge variant="secondary" className="px-2 font-mono h-5">4</Badge> */}
           </div>
           <div className="flex-1 overflow-hidden">
             <WebRTC />
